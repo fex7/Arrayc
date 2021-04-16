@@ -261,8 +261,8 @@ def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     if not is_static:
         error_message = "Object types are not equal."
         raise TypeError(error_message)
-    if arrtype in _py2c_types:
-        arrtype = _py2c_types[arrtype]
+    if arrtype in arrayc._py2c_types:
+        arrtype = arrayc._py2c_types[arrtype]
     if length == -1:
         length = len(iterable)
     # Check arrtype param.
@@ -273,4 +273,5 @@ def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     # Create Arrayc object.
     arrayc_object = Arrayc(iterable, arrtype, length, fixed)
     return arrayc_object
-    
+
+arrayc._py2c_types = copy.copy(_py2c_types)
