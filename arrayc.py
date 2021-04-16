@@ -16,10 +16,6 @@ _py2c_types = {
     None:    ctypes.c_void_p,
 }
 
-_c2py_types = {
-    ...
-}
-
 
 class ArraycIterator:
     def __init__(self, arrayc_object):
@@ -94,7 +90,8 @@ class BaseArray(abc.ABC):
         arrtype = self.arrtype
         for item in iterable:
             # Then it was not the wrong value for iterable.
-            arrtype(item.value if isinstance(item, arrtype) else item)
+            if not isinstance(item, arrtype):
+                arrtype(item)
         self.setitems(iterable)
 
     def clear(self, /):
@@ -148,13 +145,14 @@ def create_array(iterable, arrtype, length):
 
 class Arrayc(BaseArray):
 
-    def __init__(self, iterable=[], arrtype=ctypes.c_void_p, length=101):
+    def __init__(self, iterable=[], arrtype=ctypes.c_void_p, length=101, fixed=False):
         self._is_setattr_initialized = True
         array_object = create_array(iterable, arrtype, length)
 
         self.length = array_object._length_
         self.arrtype = array_object._type_
         self._arrayobject = array_object
+        self._fixed = fixed
         self._setitem = array_object.__setitem__
         self._getitem = array_object.__getitem__
         
@@ -167,14 +165,12 @@ class Arrayc(BaseArray):
             super(Arrayc, self).__setattr__(name, value)
         else:
             error_message = "'{0}' object attribute '{1}' is read-only".format(
-                self.__class__.__name__, name
-            )
+                self.__class__.__name__, name)
             raise AttributeError(error_message)
     
     def __delattr__(self, name):
         error_message = "'{0}' object attribute '{1}' is read-only".format(
-            self.__class__.__name__, name
-        )
+            self.__class__.__name__, name)
         raise AttributeError(error_message)
     
     def __setitem__(self, key, value, /):
@@ -210,6 +206,8 @@ class Arrayc(BaseArray):
         return array_object
     
     def expand(self, length=21):
+        if self._fixed:
+            raise TypeError("array is fixed")
         self._is_setattr_initialized = True
         try:
             array_object = self.getexpanded(length, is_arrayc=False)
@@ -245,13 +243,16 @@ def get_itemstype_info(iterable):
     return (True, commontype)
 
 
-def arrayc(iterable=[], arrtype=None, length=-1):
+def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     
     # Checks params
     # Checks if it is iterable.
     iter(iterable)
     if not isinstance(length, int):
-        error_message = "The 'length' param must be an integer"
+        error_message = "'length' param must be an 'int'"
+        raise TypeError(error_message)
+    if not isinstance(fixed, bool):
+        error_message = "'fixed' param must be an 'bool'"
         raise TypeError(error_message)
     # Gets iterable items type information.
     is_static, commontype = get_itemstype_info(iterable)
@@ -270,6 +271,6 @@ def arrayc(iterable=[], arrtype=None, length=-1):
         error_message = "Param 'arrtype' must have ctypes type."
         raise TypeError(error_message)
     # Create Arrayc object.
-    arrayc_object = Arrayc(iterable, arrtype, length)
+    arrayc_object = Arrayc(iterable, arrtype, length, fixed)
     return arrayc_object
     
