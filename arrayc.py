@@ -18,6 +18,12 @@ _py2c_types = {
 
 
 class ArraycIterator:
+    """Arrayc iterator class.
+
+    Used this way - iter(<Arrayc object>).
+    
+    """
+
     def __init__(self, arrayc_object):
         self.index = 0
         self.stop = arrayc_object.length
@@ -36,6 +42,13 @@ class ArraycIterator:
 
 
 class BaseArray(abc.ABC):
+    """Base class for working with ctypes.Array.
+
+    This is an abstract class, you cannot create an object of this class
+    The BaseArray class extends the ctypes.Array functionality.
+    Adds some list methods, etc.
+
+    """
     
     # Just stubs.
     length = 101
@@ -44,9 +57,11 @@ class BaseArray(abc.ABC):
     @abc.abstractmethod
     def __setitem__(self, key, value, /):
         pass
+
     @abc.abstractmethod
     def __getitem__(self, key, /):
         pass
+    
     @abc.abstractmethod
     def __delitem__(self, key, /):
         pass
@@ -155,7 +170,7 @@ class Arrayc(BaseArray):
         self._fixed = fixed
         self._setitem = array_object.__setitem__
         self._getitem = array_object.__getitem__
-        
+        self.itemsize = ctypes.sizeof(array_object._type_)
         self._is_setattr_initialized = False
     
 
@@ -218,14 +233,17 @@ class Arrayc(BaseArray):
             
         finally:
             self._is_setattr_initialized = False
+    
+    def getarrayobject(self):
+        return self._arrayobject
 
 
 def equaltypes(x, y):
     if type(x) == type(y):
         return x
     else:
-        err_msg = "Object types are not equal."
-        raise TypeError(err_msg)
+        error_message = "Object types are not equal."
+        raise TypeError(error_message)
 
 
 def get_itemstype_info(iterable):
@@ -245,7 +263,7 @@ def get_itemstype_info(iterable):
 
 def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     
-    # Checks params
+    # Checks params:
     # Checks if it is iterable.
     iter(iterable)
     if not isinstance(length, int):
