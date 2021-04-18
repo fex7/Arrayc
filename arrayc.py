@@ -41,7 +41,7 @@ class ArraycIterator:
         return item
 
 
-class BaseArray(abc.ABC):
+class BaseArray(metaclass=abc.ABCMeta):
     """Base class for working with ctypes.Array.
 
     This is an abstract class, you cannot create an object of this class
@@ -53,6 +53,7 @@ class BaseArray(abc.ABC):
     # Just stubs.
     length = 101
     arrtype = ctypes.c_void_p
+    itemsize = 0
 
     @abc.abstractmethod
     def __setitem__(self, key, value, /):
@@ -146,9 +147,29 @@ class BaseArray(abc.ABC):
         self.setitems(list_obj)
 
 
+class CtypesBaseArray:
+    def __repr__(self):
+        iterable = list(self)
+        return "<_Array(%s)>" % iterable
+    
+    def __str__(self):
+        iterable = list(self)
+        return "%s" % iterable
+    
+    def __setattr__(self, name, value):
+        error_message = "'{0}' object attribute '{1}' is read-only".format(
+            self.__class__.__name__, name)
+        raise AttributeError(error_message)
+
+    def __delattr__(self, name):
+        error_message = "'{0}' object attribute '{1}' is read-only".format(
+            self.__class__.__name__, name)
+        raise AttributeError(error_message)
+
+
 def create_array(iterable, arrtype, length):
     name = '_Array'
-    bases = (ctypes.Array,)
+    bases = (ctypes.Array, CtypesBaseArray)
     attrs = {
         '_length_': length,
         '_type_': arrtype,
@@ -234,6 +255,9 @@ class Arrayc(BaseArray):
         finally:
             self._is_setattr_initialized = False
     
+    def tolist(self):
+        return list(self._arrayobject)
+    
     def getarrayobject(self):
         return self._arrayobject
 
@@ -261,6 +285,10 @@ def get_itemstype_info(iterable):
     return (True, commontype)
 
 
+def get_items_types(iterable):
+    return frozenset(map(type, iterable))
+
+
 def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     
     # Checks params:
@@ -276,7 +304,7 @@ def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     is_static, commontype = get_itemstype_info(iterable)
     if is_static and arrtype is None:
         arrtype = commontype
-    if not is_static:
+    elif not is_static:
         error_message = "Object types are not equal."
         raise TypeError(error_message)
     if arrtype in arrayc._py2c_types:
@@ -288,8 +316,14 @@ def arrayc(iterable=[], arrtype=None, length=-1, fixed=False):
     if not isinstance(arrtype, PyCSimpleType):
         error_message = "Param 'arrtype' must have ctypes type."
         raise TypeError(error_message)
-    # Create Arrayc object.
+    # Create object.
     arrayc_object = Arrayc(iterable, arrtype, length, fixed)
     return arrayc_object
 
 arrayc._py2c_types = copy.copy(_py2c_types)
+
+
+__all__ = [
+    'arrayc',  'Arrayc',
+    'create_array', 'BaseArray',
+]
