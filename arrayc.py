@@ -1,3 +1,18 @@
+"""This module defines functions and classes for working with "ctypes.Array".
+
+Key components:
+Abstract class "BaseArray",
+it defines the basic functionality for working with arrays.
+
+The "Arrayc" class is a subclass of "BaseArray",
+it wraps and manipulates "ctypes.Array".
+
+The best way to create an "Arrayc" object is with the "arrayc" function,
+it is more high-level and reliable.
+
+Write help(arrayc.arrayc) for help with this function.
+
+"""
 
 import itertools
 import functools
@@ -18,34 +33,44 @@ _py2c_types = {
 
 
 class ArraycIterator:
-    """Arrayc iterator class.
+    """Arrayc objects iterator class.
 
     Used this way - iter(<Arrayc object>).
+
+    Constructor params:
+        array_object: Any sequence can be specified as this parameter.
+
+    Examples:
+    >>> array_object = arrayc.arrayc([1, 2, 3])
+    >>> array_iter = iter(array_object)
     
     """
 
-    def __init__(self, arrayc_object):
-        self.index = 0
-        self.stop = arrayc_object.length
-        self.arrayc_object = arrayc_object
+    def __init__(self, array_object):
+        self._index = 0
+        if isinstance(array_object, ctypes.Array):
+            self._stop = array_object._length_
+        else:
+            self._stop = array_object.length
+        self._array_object = array_object
     
     def __iter__(self):
         return self
     
     def __next__(self):
-        if self.index < self.stop:
-            item = self.arrayc_object[self.index]
+        if self._index < self._stop:
+            item = self._array_object[self._index]
         else:
             raise StopIteration
-        self.index += 1
+        self._index += 1
         return item
 
 
 class BaseArray(metaclass=abc.ABCMeta):
-    """Base class for working with ctypes.Array.
+    """Base class for working with "ctypes.Array".
 
     This is an abstract class, you cannot create an object of this class
-    The BaseArray class extends the ctypes.Array functionality.
+    The "BaseArray" class extends the "ctypes.Array" functionality.
     Adds some list methods, etc.
 
     """
@@ -99,8 +124,8 @@ class BaseArray(metaclass=abc.ABCMeta):
     
     def updateitems(self, iterable):
         if len(iterable) > self.length:
-            error_message = ("Array length is - {0}, iterable length is - {1}, " + \
-                "it's uneven!").format(self.length, len(iterable))
+            error_message = ("self length is {0}, iterable length is {1}. " + \
+                "Are not equal.").format(self.length, len(iterable))
             raise ValueError(error_message)
         # Checks if the call will raise an exception.
         arrtype = self.arrtype
@@ -112,6 +137,7 @@ class BaseArray(metaclass=abc.ABCMeta):
 
     def clear(self, /):
         arrtype_obj = self.arrtype()
+        #setitem = self._arrayobject.__setitem__
         for i in range(len(self)):
             self[i] = arrtype_obj
      
@@ -217,6 +243,9 @@ class Arrayc(BaseArray):
     
     def __delitem__(self, key, /):
         self[key] = self.arrtype()
+    
+    def __iter__(self):
+        return ArraycIterator(self._arrayobject)
     
     @staticmethod
     def setarrayitems(array_, iterable):
